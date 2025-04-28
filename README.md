@@ -44,23 +44,23 @@ It works by calling the script as such: `python s3_hrwsi_downloader.py path/to/o
 The input arguments are:
 
 #### The mode of execution (can only pick one):
--query: for searching without downloading\
--query_and_download: for searching and downloading\
--download: for downloading from a list of products previously generated with -query
++ -query: for searching without downloading\
++ -query_and_download: for searching and downloading\
++ -download: for downloading from a list of products previously generated with -query
 
 #### The mode of selection (can only pick one):
--wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/.\
--layer: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
--tiles: one or more tile identifiers defining the product locations on the Military Grid Reference System (MGRS) grid used for HR-WSI products. Format _T##XXX_ or _##XXX_. More details below.
++ -wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/.\
++ -vector: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
++ -tiles: one or more tile identifiers defining the product locations on the Military Grid Reference System (MGRS) grid used for HR-WSI products. Format _T##XXX_ or _##XXX_. More details below.
 
 #### The query parameters:
--epsg: projection system ID. Mandatory if -wkt given. Ex: 4326, 3035 or 32631\
--productType: one or more product types\
--dateStart: start date of the search window. Format _YYYY-MM-DD_.\
--dateEnd: end date of the search window. Format _YYYY-MM-DD_.
++ -epsg: projection system ID. Mandatory if -wkt given. Ex: 4326, 3035 or 32631\
++ -productType: one or more product types\
++ -dateStart: start date of the search window. Format _YYYY-MM-DD_.\
++ -dateEnd: end date of the search window. Format _YYYY-MM-DD_.
 
 #### The download parameter:
--query_file: path to the txt file listing the products found by the query
++ -query_file: path to the txt file listing the products found by the query
 
 ### The tiling system
 The script comes with a vector file _MGRS_tiles.gpkg_ containing all the MGRS tiles used for the tiling of Sentinel-2 optical satellite data. The tiles are provided in the EPSG:4326 coordinate reference system. HR-WSI raster data follows the same tiling convention.
