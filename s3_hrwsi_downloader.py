@@ -211,20 +211,20 @@ class HRWSIRequest(object):
         return mgrs_file
 
    
-    def validate_layer(self,layer_file):
+    def validate_vector(self,vector_file):
         '''
         Makes sure that the vector file exists and is valid
         '''
         try:
-            test_gpd = gpd.read_file(layer_file)
+            test_gpd = gpd.read_file(vector_file)
         except DataSourceError as err:
-            logging.error(f"-layer : {err}")
+            logging.error(f"-vector : {err}")
             sys.exit("-2")
         except ValueError as err:
-            logging.error(f"-layer : {err}")
+            logging.error(f"-vector : {err}")
             sys.exit("-2")
         except GEOSException as err:
-            logging.error(f"-layer : {err}")
+            logging.error(f"-vector : {err}")
             sys.exit("-2")
 
         test_wkt = str(test_gpd.union_all())
@@ -298,7 +298,7 @@ class HRWSIRequest(object):
         if vector:
             self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
             self.request_params[HRWSIRequest.TILES] = \
-                self.find_MGRS_tiles(*self.validate_layer(vector))
+                self.find_MGRS_tiles(*self.validate_vector(vector))
 
         if tiles:
             self.request_params[HRWSIRequest.TILES] = \
