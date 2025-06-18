@@ -49,7 +49,7 @@ The input arguments are:
 -download: for downloading from a list of products previously generated with -query
 
 #### The mode of selection (can only pick one):
--wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/.\
+-wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/. \
 -vector: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
 -tiles: one or more tile identifiers defining the product locations on the Military Grid Reference System (MGRS) grid used for HR-WSI products. Format _T##XXX_ or _##XXX_. More details below.
 
