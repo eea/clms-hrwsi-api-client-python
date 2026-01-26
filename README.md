@@ -13,7 +13,13 @@ This script allows to easily download HR-WSI products over the EEA38+UK area:
 + WIC_S1: Water/Ice Cover from Sentinel-1 data
 + WIC_S2: Water/Ice Cover from Sentinel-2 data
 + WIC_S1S2: Water/Ice Cover from the merge of WIC_S1 and WIC_S2
-\
+
+#### Yearly products (computed on an hydrological year defined as 01/09/N to 31/08/N+1)
++ SP_S2: Sentinel-2 Snow Phenology
++ SP_S1S2: Sentinel-1&2 Snow Phenology
++ ICD: Ice Cover Duration
++ WCD: Water Cover Duration
+
 Visit the CLMS portal land.copernicus.eu for more details on the products (documentation, production or dissemination updates).
 
 This client allows to reach all the available pan-European HR-WSI products, apart from the AWIC ice data which is reachable through the Python client https://github.com/eea/clms-hrwsi-api-client-python-awic. 
@@ -22,7 +28,7 @@ This client allows to reach all the available pan-European HR-WSI products, apar
 Copernicus Land Monitoring Service service desk: https://land.copernicus.eu/en/contact-service-helpdesk
 
 ## Installation
-[Prerequiste] Install Conda (https://docs.conda.io/projects/conda/en/stable/user-guide/install/) 
+[Prerequiste] Install Conda (https://docs.conda.io/projects/conda/en/stable/user-guide/install/linux.html) 
 
 A Python environment is needed with the packages described in the _env.yaml_ file:
 ```S
@@ -49,8 +55,8 @@ The input arguments are:
 -download: for downloading from a list of products previously generated with -query
 
 #### The mode of selection (can only pick one):
--wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/. \
--vector: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
+-wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/.\
+-layer: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
 -tiles: one or more tile identifiers defining the product locations on the Military Grid Reference System (MGRS) grid used for HR-WSI products. Format _T##XXX_ or _##XXX_. More details below.
 
 #### The query parameters:
@@ -88,8 +94,8 @@ output_folder
 ## Examples 
 ```S
 python s3_hrwsi_downloader.py output_folder -query -productType FSC WIC_S2 -tiles T31TCH T30TYN -dateStart 2025-02-01 -dateEnd 2025-02-15\
-python s3_hrwsi_downloader.py output_folder -query_and_download -productType FSC -wkt "POLYGON ((704922.894694 4756709.422481, 920001.318865 4729607.8903, 704922.894694 4756709.422481))" -epsg 32630 -dateStart 2025-02-01 -dateEnd 2025-02-15\
-python s3_hrwsi_downloader.py output_folder -query_and_download -productType SWS -vector path/to/layer.shp -dateStart 2025-02-15 -dateEnd 2025-03-15\
+python s3_hrwsi_downloader.py output_folder -query_and_download -productType GFSC -wkt "POLYGON ((704922.894694 4756709.422481, 920001.318865 4729607.8903, 704922.894694 4756709.422481))" -epsg 32630 -dateStart 2025-02-01 -dateEnd 2025-02-15\
+python s3_hrwsi_downloader.py output_folder -query_and_download -productType SWS -layer path/to/layer.shp -dateStart 2025-02-15 -dateEnd 2025-03-15\
 python s3_hrwsi_downloader.py output_folder -download -query_file query_file.txt
 ```
 
