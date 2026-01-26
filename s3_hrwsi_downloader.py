@@ -13,33 +13,33 @@
 #
 ################################################################################
 #
-# This Python script allows you to do S3 queries to the Copernicus Land 
-# Monitoring Service (CLMS) High Resolution-Water, Snow & Ice (HR-WSI) portfolio. 
-# It foresees capabilities for search and download CLMS products 
-# (currently only the Near Real Time products of HR-WSI). Users are recommended 
+# This Python script allows you to do S3 queries to the Copernicus Land
+# Monitoring Service (CLMS) High Resolution-Water, Snow & Ice (HR-WSI) portfolio.
+# It foresees capabilities for search and download CLMS products
+# (currently only the Near Real Time products of HR-WSI). Users are recommended
 # to rely on this Python script, to perform custom and automatic queries.
 #
 ################################################################################
-# Legal notice about Copernicus data: 
+# Legal notice about Copernicus data:
 #
-# Access to data is based on a principle of full, open and free access as 
-# established by the Copernicus data and information policy Regulation (EU) 
-# No 1159/2013 of 12 July 2013. This regulation establishes registration and 
-# licensing conditions for GMES/Copernicus users and can be found here: 
-# http://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32013R1159.  
-# 
+# Access to data is based on a principle of full, open and free access as
+# established by the Copernicus data and information policy Regulation (EU)
+# No 1159/2013 of 12 July 2013. This regulation establishes registration and
+# licensing conditions for GMES/Copernicus users and can be found here:
+# http://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32013R1159.
+#
 # Free, full and open access to this data set is made on the conditions that:
-# 
+#
 # 1. When distributing or communicating Copernicus dedicated data and Copernicus
-#    service information to the public, users shall inform the public of the 
+#    service information to the public, users shall inform the public of the
 #    source of that data and information.
-# 2. Users shall make sure not to convey the impression to the public that the 
+# 2. Users shall make sure not to convey the impression to the public that the
 #    user's activities are officially endorsed by the Union.
 # 3. Where that data or information has been adapted or modified, the user shall
 #    clearly state this.
 # 4. The data remain the sole property of the European Union. Any information and
-#    data produced in the framework of the action shall be the sole property of 
-#    the European Union. Any communication and publication by the beneficiary 
+#    data produced in the framework of the action shall be the sole property of
+#    the European Union. Any communication and publication by the beneficiary
 #    shall acknowledge that the data were produced "with funding by the European
 #    Union".
 #
@@ -91,6 +91,9 @@ class HRWSIRequest(object):
     #TILE FORMAT
     TILE_FORMAT = 'T##XXX or ##XXX'
 
+    #LIST OF YEARLY PRODUCT TYPES
+    LIST_YEARLY = ["SP_S2","SP_S1S2","WCD","ICD"]
+
     #RESULT DIR
     RESULT_DIR = 'result'
 
@@ -112,9 +115,9 @@ class HRWSIRequest(object):
                 os.path.dirname(__file__))),
         'MGRS_tiles.gpkg')
 
-    # parameter : HRWSI product type (FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC).
+    # parameter : HRWSI product type (FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD).
     PRODUCT_TYPE = 'productType'
-   
+
     def __init__(self, outputPath):
         self.outputPath = os.path.abspath(outputPath)
         if not os.path.exists(self.outputPath):
@@ -128,18 +131,19 @@ class HRWSIRequest(object):
     def validate_product_type(self,product_type):
         '''
         Makes sure that the product type exists in the HRWSI catalogue
+        Informs the frequency of the product type : daily (d), monthly (m) or 
         '''
         valid = False
         for _ in self.s3_client.Bucket(HRWSIRequest.BUCKET).objects.filter(Prefix=product_type+"/"):
             valid = True
             break
-            
+
         if not valid:
             logging.error(f"-productType : {product_type} does not exist")
             sys.exit("-2")
-            
+
         return product_type
-            
+
     def validate_dates(self,dateStart,dateEnd):
         '''
         Makes sure that the dates are in the right format and that dateStart is <= dateEnd
@@ -148,7 +152,7 @@ class HRWSIRequest(object):
             if datetime.datetime.strptime(dateStart, HRWSIRequest.DATE_FORMAT) > \
             datetime.datetime.strptime(dateEnd, HRWSIRequest.DATE_FORMAT):
                 raise ValueError("-dateStart is after dateEnd!")
-                
+
         except TypeError as err:
             logging.error(f"-dateStart or -dateEnd : {err} ")
             sys.exit(-2)
@@ -157,14 +161,14 @@ class HRWSIRequest(object):
             sys.exit(-2)
 
         return dateStart,dateEnd
-    
+
     def validate_tile_format(self,tile_text):
         '''
         Makes sure that the tile are in the right format
         '''
         tile = None
         found = re.search(r'\d{2}'+ '[A-Z]{3}', tile_text)
-        if found != None and ((len(tile_text) == 6 and tile_text[0]=="T") or (len(tile_text) == 5 )):
+        if found != None and ((len(tile_text) == 6 and tile_text[0]=="T") or (len(tile_text) == 5)):
             tile = found
         try:
             return tile.group(0)
@@ -210,21 +214,21 @@ class HRWSIRequest(object):
 
         return mgrs_file
 
-   
-    def validate_vector(self,vector_file):
+
+    def validate_layer(self,layer_file):
         '''
         Makes sure that the vector file exists and is valid
         '''
         try:
-            test_gpd = gpd.read_file(vector_file)
+            test_gpd = gpd.read_file(layer_file)
         except DataSourceError as err:
-            logging.error(f"-vector : {err}")
+            logging.error(f"-layer : {err}")
             sys.exit("-2")
         except ValueError as err:
-            logging.error(f"-vector : {err}")
+            logging.error(f"-layer : {err}")
             sys.exit("-2")
         except GEOSException as err:
-            logging.error(f"-vector : {err}")
+            logging.error(f"-layer : {err}")
             sys.exit("-2")
 
         test_wkt = str(test_gpd.union_all())
@@ -232,10 +236,19 @@ class HRWSIRequest(object):
 
         return self.validate_wkt_epsg(test_epsg,test_wkt)
 
+    def get_hydro_year(self, dt):
+        """Returns the hydrological year for a given datetime object."""
+        # If the month is Sept (9) or later, the hydro year is the current year.
+        # Otherwise, it is the previous year.
+        if dt.month >= 9:
+            return dt.year
+        else:
+            return dt.year - 1
+
 
     def set_query_file(self, query_file):
         self.query_file = query_file
- 
+
     def set_client(self):
         '''
         access the catalogue for future data parsing/dowloading.
@@ -298,7 +311,7 @@ class HRWSIRequest(object):
         if vector:
             self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
             self.request_params[HRWSIRequest.TILES] = \
-                self.find_MGRS_tiles(*self.validate_vector(vector))
+                self.find_MGRS_tiles(*self.validate_layer(vector))
 
         if tiles:
             self.request_params[HRWSIRequest.TILES] = \
@@ -335,9 +348,7 @@ class HRWSIRequest(object):
         '''
 
         start_date = datetime.datetime.strptime(self.request_params[HRWSIRequest.START_DATE], HRWSIRequest.DATE_FORMAT).date()
-        start_marker_date = start_date
         end_date = datetime.datetime.strptime(self.request_params[HRWSIRequest.END_DATE], HRWSIRequest.DATE_FORMAT).date()
-        end_marker_date = end_date + datetime.timedelta(days=1)
         total_size_b = 0
         total_list_products = []
         logging.info("Search period : " + f"{start_date.strftime(HRWSIRequest.DATE_FORMAT)} - {end_date.strftime(HRWSIRequest.DATE_FORMAT)}")
@@ -345,9 +356,18 @@ class HRWSIRequest(object):
             logging.info("    Looking for product type : " + pT)
             for tile in tqdm(self.request_params[HRWSIRequest.TILES]):
                 #logging.info("        Looking for tile : " + tile)
-                marker_start = f"{pT}/{tile}/{start_marker_date.year}/{start_marker_date.strftime('%m')}/{start_marker_date.strftime('%d')}"
-                marker_end = f"{pT}/{tile}/{end_marker_date.year}/{end_marker_date.strftime('%m')}/{end_marker_date.strftime('%d')}"
                 prefix = f"{pT}/{tile}"
+                if pT in self.LIST_YEARLY:
+				    #we calculate the starting and ending Hydrological Years
+                    start_marker_HY = self.get_hydro_year(start_date)
+                    end_marker_HY = self.get_hydro_year(end_date) + 1
+                    marker_start = f"{prefix}/{start_marker_HY}"
+                    marker_end = f"{prefix}/{end_marker_HY}"   
+                else:
+                    start_marker_date = start_date
+                    end_marker_date = end_date + datetime.timedelta(days=1)
+                    marker_start = f"{prefix}/{start_marker_date.year}/{start_marker_date.strftime('%m')}/{start_marker_date.strftime('%d')}"
+                    marker_end = f"{prefix}/{end_marker_date.year}/{end_marker_date.strftime('%m')}/{end_marker_date.strftime('%d')}"
                 contents_to_filter = [obj for obj in self.s3_client.Bucket(HRWSIRequest.BUCKET).objects.filter(Prefix = prefix,Marker=marker_start)]
                 contents_filter = [obj for obj in self.s3_client.Bucket(HRWSIRequest.BUCKET).objects.filter(Prefix = prefix,Marker=marker_end)]
                 contents = [item for item in contents_to_filter if item not in contents_filter]
@@ -391,25 +411,21 @@ class HRWSIRequest(object):
             with open(self.query_file) as f:
                 content = f.readlines()
             product_list = [x.strip() for x in content if x.strip()]
-            
+
         except :
             logging.error("Error while parsing query_file file: " + str(self.query_file))
             raise
-            
+
         if len(product_list) > HRWSIRequest.DOWNLOAD_THRESHOLD:
             logging.error(f"Nb of products above the download threshold of {HRWSIRequest.DOWNLOAD_THRESHOLD}")
             raise
-            
+
         # loop to download all products within the list
         logging.info(f"start downloading {len(product_list)} products")
         for info_product in tqdm(product_list):
 
             # start actual download
             self.download_from_s3(info_product)
-        
-        
-            
-
 
     @retry(EndpointConnectionError, tries=3, delay=2)
     def download_from_s3(self, product_dir: str):
@@ -475,7 +491,7 @@ def main():
     # Parameters used to define a query, to use a query generated through the HR-WSI finder or to build a new one
     group_query = parser.add_argument_group("query_params", "mandatory parameters for query and query_and_download modes")
     group_query.add_argument("-epsg", type=str, help="Projection system ID. Mandatory if -wkt given. ex: 4326 or 32631")
-    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC")
+    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD")
     group_query.add_argument("-dateStart", type=str, help="start date of the search window. Observation date. Format YYYY-MM-DD.")
     group_query.add_argument("-dateEnd", type=str, help="end date of the search window. Observation date. Format YYYY-MM-DD.")
 
@@ -502,7 +518,7 @@ def main():
             parser.error("-epsg requires -wkt")
         if args.query_file:
             parser.error("-query_file can only be given with -download")
-        
+
     if args.download :
         if not args.query_file:
             parser.error("-download requires -query_file")
@@ -532,7 +548,7 @@ def main():
     # download products
     if args.query_and_download or args.download:
         logging.info("Start downloading...")
-        hrwsi.download();
+        hrwsi.download()
         logging.info("Downloading complete!")
         logging.info("Downloaded products are in " + os.path.join(hrwsi.outputPath, hrwsi.RESULT_DIR))
     else:
