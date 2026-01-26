@@ -56,7 +56,7 @@ The input arguments are:
 
 #### The mode of selection (can only pick one):
 -wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/.\
--layer: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
+-vector: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
 -tiles: one or more tile identifiers defining the product locations on the Military Grid Reference System (MGRS) grid used for HR-WSI products. Format _T##XXX_ or _##XXX_. More details below.
 
 #### The query parameters:
@@ -95,7 +95,7 @@ output_folder
 ```S
 python s3_hrwsi_downloader.py output_folder -query -productType FSC WIC_S2 -tiles T31TCH T30TYN -dateStart 2025-02-01 -dateEnd 2025-02-15\
 python s3_hrwsi_downloader.py output_folder -query_and_download -productType GFSC -wkt "POLYGON ((704922.894694 4756709.422481, 920001.318865 4729607.8903, 704922.894694 4756709.422481))" -epsg 32630 -dateStart 2025-02-01 -dateEnd 2025-02-15\
-python s3_hrwsi_downloader.py output_folder -query_and_download -productType SWS -layer path/to/layer.shp -dateStart 2025-02-15 -dateEnd 2025-03-15\
+python s3_hrwsi_downloader.py output_folder -query_and_download -productType SWS -vector path/to/layer.shp -dateStart 2025-02-15 -dateEnd 2025-03-15\
 python s3_hrwsi_downloader.py output_folder -download -query_file query_file.txt
 ```
 
