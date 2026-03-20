@@ -1,7 +1,7 @@
 # Python client for accessing the Copernicus Land Monitoring Service - High Resolution Water, Snow & Ice (HR-WSI) products
 
 ## Description
-Python client for accessing the Copernicus Land Monitoring Service HR-WSI data by means of the S3 AWS tools. A full list of the available data can be found [here](https://s3.waw3-2.cloudferro.com/swift/v1/HRWSI/).
+Python client for accessing the Copernicus Land Monitoring Service HR-WSI data by means of the S3 AWS tools. 
 
 This script allows to easily download HR-WSI products over the EEA38+UK area:
 #### Near real-time and daily products
