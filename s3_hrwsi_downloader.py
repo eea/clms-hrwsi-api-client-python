@@ -89,10 +89,13 @@ class HRWSIRequest(object):
     DATE_FORMAT = '%Y-%m-%d'
 
     #TILE FORMAT
-    TILE_FORMAT = 'T##XXX or ##XXX'
+    TILE_FORMAT = 'T##XXX or ##XXX for MGRS tiles / E##N## for LAEA tiles'
 
     #LIST OF YEARLY PRODUCT TYPES
-    LIST_YEARLY = ["SP_S2","SP_S1S2","WCD","ICD"]
+    LIST_YEARLY = ["SP_S2","SP_S1S2","WCD","WCD_LAEA_010", "WCD_LAEA_100", "ICD"]
+
+    #LIST OF MULTIYEARLY PRODUCT TYPES
+    LIST_MULTIYEARLY = ["HRWL","HRWL_LAEA_010", "HRWL_LAEA_100"]
 
     #RESULT DIR
     RESULT_DIR = 'result'
@@ -101,7 +104,7 @@ class HRWSIRequest(object):
     START_DATE = 'start_date'
     END_DATE = 'end_date'
 
-    # HRWSI product  T32TLR
+    # HRWSI product T32TLR or E34N22
     TILES = 'tiles'
 
     # MGRS TILES
@@ -115,7 +118,18 @@ class HRWSIRequest(object):
                 os.path.dirname(__file__))),
         'MGRS_tiles.gpkg')
 
-    # parameter : HRWSI product type (FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD).
+    # LAEA TILES
+    LAEA_TILES = "laea"
+    
+    # LAEA TILES GPKG
+    LAEA_FILE = os.path.join(
+        os.path.realpath(
+            os.path.join(
+                os.getcwd(),
+                os.path.dirname(__file__))),
+        'LAEA_tiles.gpkg')
+
+    # parameter : HRWSI product type (FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL_LAEA_010|WCD_LAEA_010|WCD_LAEA_100|HRWL|HRWL_LAEA_100).
     PRODUCT_TYPE = 'productType'
 
     def __init__(self, outputPath):
@@ -131,7 +145,6 @@ class HRWSIRequest(object):
     def validate_product_type(self,product_type):
         '''
         Makes sure that the product type exists in the HRWSI catalogue
-        Informs the frequency of the product type : daily (d), monthly (m) or 
         '''
         valid = False
         for _ in self.s3_client.Bucket(HRWSIRequest.BUCKET).objects.filter(Prefix=product_type+"/"):
@@ -166,6 +179,9 @@ class HRWSIRequest(object):
         '''
         Makes sure that the tile are in the right format
         '''
+        from pdb import set_trace; set_trace()
+        #@TODO ajouter un check du format LAEA - a faire si le produit type contient LAEA?
+
         tile = None
         found = re.search(r'\d{2}'+ '[A-Z]{3}', tile_text)
         if found != None and ((len(tile_text) == 6 and tile_text[0]=="T") or (len(tile_text) == 5)):
@@ -214,6 +230,23 @@ class HRWSIRequest(object):
 
         return mgrs_file
 
+    def validate_LAEA_file(self,laea_file):
+            '''
+            Makes sure that the LAEA tiles file exists and is valid
+            '''
+            try:
+                test_gpd = gpd.read_file(laea_file)
+            except DataSourceError as err:
+                logging.error(f"mgrs file : {err}")
+                sys.exit("-2")
+            except ValueError as err:
+                logging.error(f"mgrs file : {err}")
+                sys.exit("-2")
+            except GEOSException as err:
+                logging.error(f"mgrs file : {err}")
+                sys.exit("-2")
+    
+            return laea_file
 
     def validate_layer(self,layer_file):
         '''
@@ -275,6 +308,8 @@ class HRWSIRequest(object):
         found_tiles_gpd = tile_gpd[tile_gpd.foundTiles.isin(intersecting)]
 
         return found_tiles_gpd.Name.to_list()
+
+    #@TODO same for LAEA tles in gpkg.
 
 
     def build_query(self,
