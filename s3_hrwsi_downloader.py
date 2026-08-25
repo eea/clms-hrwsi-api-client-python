@@ -230,41 +230,23 @@ class HRWSIRequest(object):
 
         return epsg_text,wkt_text
 
-    def validate_MGRS_file(self,mgrs_file):
+    def validate_gpkg_file(self,gpkg_file):
         '''
-        Makes sure that the MGRS file exists and is valid
+        Makes sure that the MGRS or the LAEA file exists and is valid
         '''
         try:
-            test_gpd = gpd.read_file(mgrs_file)
+            test_gpd = gpd.read_file(gpkg_file)
         except DataSourceError as err:
-            logging.error(f"mgrs file : {err}")
+            logging.error(f"gpkg file : {err}")
             sys.exit("-2")
         except ValueError as err:
-            logging.error(f"mgrs file : {err}")
+            logging.error(f"gpkg file : {err}")
             sys.exit("-2")
         except GEOSException as err:
-            logging.error(f"mgrs file : {err}")
+            logging.error(f"gpkg file : {err}")
             sys.exit("-2")
 
-        return mgrs_file
-
-    def validate_LAEA_file(self,laea_file):
-            '''
-            Makes sure that the LAEA tiles file exists and is valid
-            '''
-            try:
-                test_gpd = gpd.read_file(laea_file)
-            except DataSourceError as err:
-                logging.error(f"mgrs file : {err}")
-                sys.exit("-2")
-            except ValueError as err:
-                logging.error(f"mgrs file : {err}")
-                sys.exit("-2")
-            except GEOSException as err:
-                logging.error(f"mgrs file : {err}")
-                sys.exit("-2")
-    
-            return laea_file
+        return gpkg_file
 
     def validate_layer(self,layer_file):
         '''
@@ -313,8 +295,9 @@ class HRWSIRequest(object):
                                  aws_secret_access_key=HRWSIRequest.SECRET_KEY,
                                  endpoint_url=HRWSIRequest.ENDPOINT_URL)
 
-    def find_MGRS_tiles(self,epsg_text,wkt_text):
-        tile_gpd = gpd.read_file(HRWSIRequest.MGRS_FILE)
+    def find_tiles(self,epsg_text,wkt_text,gpkg_file):
+        print("coucou je lis",  gpkg_file, " et mon wkt est ", wkt_text, " et il est en ", epsg_text)
+        tile_gpd = gpd.read_file(gpkg_file)
 
         poly_gpd = gpd.GeoDataFrame(
             geometry=gpd.GeoSeries.from_wkt(
@@ -326,8 +309,6 @@ class HRWSIRequest(object):
         found_tiles_gpd = tile_gpd[tile_gpd.foundTiles.isin(intersecting)]
 
         return found_tiles_gpd.Name.to_list()
-
-    #@TODO same for LAEA tles in gpkg.
 
 
     def build_query(self,
@@ -360,24 +341,25 @@ class HRWSIRequest(object):
         self.request_params[HRWSIRequest.PRODUCT_TYPE] = \
         [self.validate_product_type(pT) for pT in productType]
 
-        mgrs_tiling = self.check_tiling_type_consistency(productType)
-
         self.request_params[HRWSIRequest.START_DATE], self.request_params[HRWSIRequest.END_DATE] = \
         self.validate_dates(dateStart,dateEnd)
 
-        if wkt or vector:
-            if mgrs_tiling:
-                self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
-            else:
-                self.validate_LAEA_file(HRWSIRequest.LAEA_FILE)
+        mgrs_tiling = True
+        if self.check_tiling_type_consistency(productType):
+            tiling_gpkg = HRWSIRequest.MGRS_FILE   
+        else: 
+            tiling_gpkg = HRWSIRequest.LAEA_FILE
+            mgrs_tiling = False
 
         if wkt:
+            self.validate_gpkg_file(tiling_gpkg)
             self.request_params[HRWSIRequest.TILES] = \
-                self.find_MGRS_tiles(*self.validate_wkt_epsg(epsg,wkt))
+                self.find_tiles(*self.validate_wkt_epsg(epsg,wkt), tiling_gpkg)
 
         if vector:
+            self.validate_gpkg_file(tiling_gpkg)
             self.request_params[HRWSIRequest.TILES] = \
-                self.find_MGRS_tiles(*self.validate_layer(vector))
+                self.find_tiles(*self.validate_layer(vector), tiling_gpkg)
 
         if tiles:
             self.request_params[HRWSIRequest.TILES] = \
