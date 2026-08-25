@@ -157,6 +157,21 @@ class HRWSIRequest(object):
 
         return product_type
 
+    def check_tiling_type_consistency(self,product_type):
+            '''
+            Makes sure that the product type list only consists of LAEA or UTM product type
+            '''
+            mgrs_tiling = True
+
+            if any("LAEA" in product for product in product_type):
+                if not all("LAEA" in product for product in product_type):
+                    logging.error(f"-productType : all requested products should be in either LAEA or UTM tiling.")
+                    sys.exit("-2")
+                mgrs_tiling = False
+    
+            return mgrs_tiling
+    
+
     def validate_dates(self,dateStart,dateEnd):
         '''
         Makes sure that the dates are in the right format and that dateStart is <= dateEnd
@@ -175,17 +190,20 @@ class HRWSIRequest(object):
 
         return dateStart,dateEnd
 
-    def validate_tile_format(self,tile_text):
+    def validate_tile_format(self,tile_text, mgrs_tiling):
         '''
-        Makes sure that the tile are in the right format
+        Makes sure that the tile is in the right format
         '''
-        from pdb import set_trace; set_trace()
-        #@TODO ajouter un check du format LAEA - a faire si le produit type contient LAEA?
-
-        tile = None
-        found = re.search(r'\d{2}'+ '[A-Z]{3}', tile_text)
-        if found != None and ((len(tile_text) == 6 and tile_text[0]=="T") or (len(tile_text) == 5)):
-            tile = found
+        if mgrs_tiling:
+            tile = None
+            found = re.search(r'\d{2}'+ '[A-Z]{3}', tile_text)
+            if found != None and ((len(tile_text) == 6 and tile_text[0]=="T") or (len(tile_text) == 5)):
+                tile = found
+        else: 
+            tile = None
+            found = re.search('E' + r'\d{2}'+ 'N' + r'\d{2}', tile_text)
+            if found != None and len(tile_text) == 6:
+                tile = found
         try:
             return tile.group(0)
         except:
@@ -338,19 +356,33 @@ class HRWSIRequest(object):
             HRWSIRequest.END_DATE:None,
             }
 
+        #search parameters
+        self.request_params[HRWSIRequest.PRODUCT_TYPE] = \
+        [self.validate_product_type(pT) for pT in productType]
+
+        mgrs_tiling = self.check_tiling_type_consistency(productType)
+
+        self.request_params[HRWSIRequest.START_DATE], self.request_params[HRWSIRequest.END_DATE] = \
+        self.validate_dates(dateStart,dateEnd)
+
+        if wkt or vector:
+            if mgrs_tiling:
+                self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
+            else:
+                self.validate_LAEA_file(HRWSIRequest.LAEA_FILE)
+
         if wkt:
-            self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
             self.request_params[HRWSIRequest.TILES] = \
                 self.find_MGRS_tiles(*self.validate_wkt_epsg(epsg,wkt))
 
         if vector:
-            self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
             self.request_params[HRWSIRequest.TILES] = \
                 self.find_MGRS_tiles(*self.validate_layer(vector))
 
         if tiles:
             self.request_params[HRWSIRequest.TILES] = \
-                [self.validate_tile_format(tile).upper() for tile in tiles ]
+                [self.validate_tile_format(tile, mgrs_tiling).upper() for tile in tiles ]
+            
 
         if len(self.request_params[HRWSIRequest.TILES]) == 0:
             logging.error("No tiles were identified")
@@ -359,13 +391,7 @@ class HRWSIRequest(object):
             self.request_params[HRWSIRequest.TILES] = \
             list(set(self.request_params[HRWSIRequest.TILES]))
 
-        #search parameters
-        self.request_params[HRWSIRequest.PRODUCT_TYPE] = \
-        [self.validate_product_type(pT) for pT in productType]
-
-        self.request_params[HRWSIRequest.START_DATE], self.request_params[HRWSIRequest.END_DATE] = \
-        self.validate_dates(dateStart,dateEnd)
-
+        
         logging.info("Query parameters: ")
         logging.info(self.request_params)
 
