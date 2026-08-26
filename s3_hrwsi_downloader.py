@@ -278,6 +278,16 @@ class HRWSIRequest(object):
         else:
             return dt.year - 1
 
+    def get_hrwl_start_year(self, dt):
+        """Returns the HRWL reference period start date for a given datetime object."""
+        # The 3 available HRWL products are for the reference years 2021, 2024, 2027.
+        # Their location in the bucket is in YEAR where YEAR is the start year, respectively, 2016, 2021, and 2024.        
+        if dt.year <= 2021:
+            return 2016
+        elif (dt.year > 2021) and (dt.year <= 2024):
+            return 2021
+        elif dt.year > 2024:
+            return 2024
 
     def set_query_file(self, query_file):
         self.query_file = query_file
@@ -296,7 +306,6 @@ class HRWSIRequest(object):
                                  endpoint_url=HRWSIRequest.ENDPOINT_URL)
 
     def find_tiles(self,epsg_text,wkt_text,gpkg_file):
-        print("coucou je lis",  gpkg_file, " et mon wkt est ", wkt_text, " et il est en ", epsg_text)
         tile_gpd = gpd.read_file(gpkg_file)
 
         poly_gpd = gpd.GeoDataFrame(
@@ -365,7 +374,6 @@ class HRWSIRequest(object):
             self.request_params[HRWSIRequest.TILES] = \
                 [self.validate_tile_format(tile, mgrs_tiling).upper() for tile in tiles ]
             
-
         if len(self.request_params[HRWSIRequest.TILES]) == 0:
             logging.error("No tiles were identified")
             sys.exit(-2)
@@ -373,7 +381,6 @@ class HRWSIRequest(object):
             self.request_params[HRWSIRequest.TILES] = \
             list(set(self.request_params[HRWSIRequest.TILES]))
 
-        
         logging.info("Query parameters: ")
         logging.info(self.request_params)
 
@@ -400,7 +407,13 @@ class HRWSIRequest(object):
             for tile in tqdm(self.request_params[HRWSIRequest.TILES]):
                 #logging.info("        Looking for tile : " + tile)
                 prefix = f"{pT}/{tile}"
-                if pT in self.LIST_YEARLY:
+                if pT in self.LIST_MULTIYEARLY:
+                    #we calculate the starting and ending adapted to HRWL multi-yearly products
+                    start_marker_HRWL = self.get_hrwl_start_year(start_date)
+                    end_marker_HRWL = self.get_hrwl_start_year(end_date) + 1
+                    marker_start = f"{prefix}/{start_marker_HRWL}"
+                    marker_end = f"{prefix}/{end_marker_HRWL}"  
+                elif pT in self.LIST_YEARLY:
 				    #we calculate the starting and ending Hydrological Years
                     start_marker_HY = self.get_hydro_year(start_date)
                     end_marker_HY = self.get_hydro_year(end_date) + 1
