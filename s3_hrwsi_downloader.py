@@ -15,8 +15,9 @@
 #
 # This Python script allows you to do S3 queries to the Copernicus Land
 # Monitoring Service (CLMS) High Resolution-Water, Snow & Ice (HR-WSI) portfolio.
-# It foresees capabilities for search and download CLMS products. Users 
-# are recommended to rely on this Python script, to perform custom and automatic queries.
+# It foresees capabilities for search and download CLMS products 
+# (except SP_S2, SP_S1S2 and ICD in LAEA projection). Users are recommended 
+# to rely on this Python script, to perform custom and automatic queries.
 #
 ################################################################################
 # Legal notice about Copernicus data:
@@ -549,14 +550,14 @@ def main():
     # Parameters used to define a query, to use a query generated through the HR-WSI finder or to build a new one
     group_query = parser.add_argument_group("query_params", "mandatory parameters for query and query_and_download modes")
     group_query.add_argument("-epsg", type=str, help="Projection system ID. Mandatory if -wkt given. ex: 4326 or 32631")
-    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL or SP_S2_LAEA_020|SP_S2_LAEA_100|SP_S1S2_LAEA_060|SP_S1S2_LAEA_100|ICD_LAEA_020|ICD_LAEA_100|WCD_LAEA_010|WCD_LAEA_100|HRWL_LAEA_010|HRWL_LAEA_100")
+    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL or among SP_S2_LAEA_020|SP_S2_LAEA_100|SP_S1S2_LAEA_060|SP_S1S2_LAEA_100|ICD_LAEA_020|ICD_LAEA_100|WCD_LAEA_010|WCD_LAEA_100|HRWL_LAEA_010|HRWL_LAEA_100")
     group_query.add_argument("-dateStart", type=str, help="start date of the search window. Observation date. Format YYYY-MM-DD.")
     group_query.add_argument("-dateEnd", type=str, help="end date of the search window. Observation date. Format YYYY-MM-DD.")
 
     # Parameter to download products found with last query
     group_download = parser.add_argument_group("download_params", "mandatory parameters for query_and_download or download modes")
     group_download.add_argument("-query_file", type=str, \
-        help="takes a .txt file containing a list of HR-WSI products to download. Path in the format productType/tile(minus the 'T')/year/month/day/product_name")
+        help="takes a .txt file containing a list of HR-WSI products to download (paths in the format productType/tile(minus the 'T')/year/month/day/product_name or productType/LAEA_tile/year/product_name for instance)")
 
     args = parser.parse_args()
 
