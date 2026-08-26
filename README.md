@@ -1,7 +1,7 @@
 # Python client for accessing the Copernicus Land Monitoring Service - High Resolution Water, Snow & Ice (HR-WSI) products
 
 ## Description
-Python client for accessing the Copernicus Land Monitoring Service HR-WSI data by means of the S3 AWS tools. A full list of the available data can be found [here](https://s3.waw3-2.cloudferro.com/swift/v1/HRWSI/).
+Python client for accessing the Copernicus Land Monitoring Service HR-WSI data by means of the S3 AWS tools. 
 
 This script allows to easily download HR-WSI products over the EEA38+UK area:
 #### Near real-time and daily products
@@ -19,6 +19,15 @@ This script allows to easily download HR-WSI products over the EEA38+UK area:
 + SP_S1S2: Sentinel-1&2 Snow Phenology
 + ICD: Ice Cover Duration
 + WCD: Water Cover Duration
+
+#### Multi-yearly products (reference years 2021)
++ HRWL: High Resolution Water Layer
+
+#### The yearly and multi-yearly products are also available in the Lambert Azimuthal Equal-Area (LAEA) projection grid.
++ WCD_LAEA_010: Water Cover Duration in 10m
++ WCD_LAEA_100: Water Cover Duration in 10m
++ HRWL_LAEA_010: High Resolution Water Layer in 10m
++ HRWL_LAEA_010: High Resolution Water Layer in 100m
 
 Visit the CLMS portal land.copernicus.eu for more details on the products (documentation, production or dissemination updates).
 
@@ -57,11 +66,11 @@ The input arguments are:
 #### The mode of selection (can only pick one):
 -wkt: Well Known Text (between \"\") describing either a polygon (ex: _\"POLYGON ((1 1,5 1,5 5,1 5,1 1))\"_ ) or a multi polygon (ex: _\"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\")_. For example, WKT can be created online using such a tool: https://wktmap.com/.\
 -vector: Vector file containing a 2D vector layer (polygon or multipolygon). Can be `.shp`, `.geosjson`, `.gpkg`, `.kml`. Must include a projection system.\
--tiles: one or more tile identifiers defining the product locations on the Military Grid Reference System (MGRS) grid used for HR-WSI products. Format _T##XXX_ or _##XXX_. More details below.
+-tiles: one or more tile identifiers defining the product locations, either on the Military Grid Reference System (MGRS) grid used for Sentinel-2 products (format T##XXX or ##XXX. Example: T31TCH 28WET) or on the Lambert Azimuthal Equal-Area (LAEA) projection grid (format E##N##. Example: E34N22). More details below.
 
 #### The query parameters:
 -epsg: projection system ID. Mandatory if -wkt given. Ex: 4326, 3035 or 32631\
--productType: one or more product types\
+-productType: one or more product types. All requested products should be in either LAEA or UTM/MGRS tiling.\
 -dateStart: start date of the search window. Format _YYYY-MM-DD_.\
 -dateEnd: end date of the search window. Format _YYYY-MM-DD_.
 
@@ -73,6 +82,7 @@ The script comes with a vector file _MGRS_tiles.gpkg_ containing all the MGRS ti
 More information on the tiling system can be found at https://hls.gsfc.nasa.gov/products-description/tiling-system/. 
 This `.gpkg` file is necessary to dispense the user from knowing the tiling nomenclature, and must be present in the same directory as the Python script. 
 However, its presence is not necessary if the script is used solely to download products from a predefined list, or if the user manually provides the tile identifiers as input.
+In a similar way, the script comes with a vector file _LAEA_tiles.gpkg_ containing all the LAEA tiles used in the HR-WSI production. The tiles are provided in the EPSG:3035 coordinate reference system. HR-WSI raster data follows the same tiling convention.
 
 ### Download threshold
 The download is limited to 500 products per run.
