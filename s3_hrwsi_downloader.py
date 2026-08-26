@@ -15,8 +15,8 @@
 #
 # This Python script allows you to do S3 queries to the Copernicus Land
 # Monitoring Service (CLMS) High Resolution-Water, Snow & Ice (HR-WSI) portfolio.
-# It foresees capabilities for search and download CLMS products
-# (currently only the Near Real Time products of HR-WSI). Users are recommended
+# It foresees capabilities for search and download CLMS products 
+# (except SP_S2, SP_S1S2 and ICD in LAEA projection). Users are recommended 
 # to rely on this Python script, to perform custom and automatic queries.
 #
 ################################################################################
@@ -89,10 +89,16 @@ class HRWSIRequest(object):
     DATE_FORMAT = '%Y-%m-%d'
 
     #TILE FORMAT
-    TILE_FORMAT = 'T##XXX or ##XXX'
+    TILE_FORMAT = 'T##XXX or ##XXX for MGRS tiles / E##N## for LAEA tiles'
 
     #LIST OF YEARLY PRODUCT TYPES
-    LIST_YEARLY = ["SP_S2","SP_S1S2","WCD","ICD"]
+    LIST_YEARLY = ["SP_S2", "SP_S2_LAEA_020", "SP_S2_LAEA_100",
+                   "SP_S1S2","SP_S1S2_LAEA_060", "SP_S1S2_LAEA_100",
+                   "WCD","WCD_LAEA_010", "WCD_LAEA_100",
+                   "ICD", "ICD_LAEA_020", "ICD_LAEA_100"]
+
+    #LIST OF MULTIYEARLY PRODUCT TYPES
+    LIST_MULTIYEARLY = ["HRWL","HRWL_LAEA_010", "HRWL_LAEA_100"]
 
     #RESULT DIR
     RESULT_DIR = 'result'
@@ -101,7 +107,7 @@ class HRWSIRequest(object):
     START_DATE = 'start_date'
     END_DATE = 'end_date'
 
-    # HRWSI product  T32TLR
+    # HRWSI product T32TLR or E34N22
     TILES = 'tiles'
 
     # MGRS TILES
@@ -115,7 +121,18 @@ class HRWSIRequest(object):
                 os.path.dirname(__file__))),
         'MGRS_tiles.gpkg')
 
-    # parameter : HRWSI product type (FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD).
+    # LAEA TILES
+    LAEA_TILES = "laea"
+    
+    # LAEA TILES GPKG
+    LAEA_FILE = os.path.join(
+        os.path.realpath(
+            os.path.join(
+                os.getcwd(),
+                os.path.dirname(__file__))),
+        'LAEA_tiles.gpkg')
+
+    # parameter : HRWSI product type FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL or SP_S2_LAEA_020|SP_S2_LAEA_100|SP_S1S2_LAEA_060|SP_S1S2_LAEA_100|ICD_LAEA_020|ICD_LAEA_100|WCD_LAEA_010|WCD_LAEA_100|HRWL_LAEA_010|HRWL_LAEA_100.
     PRODUCT_TYPE = 'productType'
 
     def __init__(self, outputPath):
@@ -131,7 +148,6 @@ class HRWSIRequest(object):
     def validate_product_type(self,product_type):
         '''
         Makes sure that the product type exists in the HRWSI catalogue
-        Informs the frequency of the product type : daily (d), monthly (m) or 
         '''
         valid = False
         for _ in self.s3_client.Bucket(HRWSIRequest.BUCKET).objects.filter(Prefix=product_type+"/"):
@@ -143,6 +159,21 @@ class HRWSIRequest(object):
             sys.exit("-2")
 
         return product_type
+
+    def check_tiling_type_consistency(self,product_type):
+            '''
+            Makes sure that the product type list only consists of LAEA or UTM product type
+            '''
+            mgrs_tiling = True
+
+            if any("LAEA" in product for product in product_type):
+                if not all("LAEA" in product for product in product_type):
+                    logging.error(f"-productType : all requested products should be in either LAEA or UTM tiling.")
+                    sys.exit("-2")
+                mgrs_tiling = False
+    
+            return mgrs_tiling
+    
 
     def validate_dates(self,dateStart,dateEnd):
         '''
@@ -162,14 +193,20 @@ class HRWSIRequest(object):
 
         return dateStart,dateEnd
 
-    def validate_tile_format(self,tile_text):
+    def validate_tile_format(self,tile_text, mgrs_tiling):
         '''
-        Makes sure that the tile are in the right format
+        Makes sure that the tile is in the right format
         '''
-        tile = None
-        found = re.search(r'\d{2}'+ '[A-Z]{3}', tile_text)
-        if found != None and ((len(tile_text) == 6 and tile_text[0]=="T") or (len(tile_text) == 5)):
-            tile = found
+        if mgrs_tiling:
+            tile = None
+            found = re.search(r'\d{2}'+ '[A-Z]{3}', tile_text)
+            if found != None and ((len(tile_text) == 6 and tile_text[0]=="T") or (len(tile_text) == 5)):
+                tile = found
+        else: 
+            tile = None
+            found = re.search('E' + r'\d{2}'+ 'N' + r'\d{2}', tile_text)
+            if found != None and len(tile_text) == 6:
+                tile = found
         try:
             return tile.group(0)
         except:
@@ -196,24 +233,23 @@ class HRWSIRequest(object):
 
         return epsg_text,wkt_text
 
-    def validate_MGRS_file(self,mgrs_file):
+    def validate_gpkg_file(self,gpkg_file):
         '''
-        Makes sure that the MGRS file exists and is valid
+        Makes sure that the MGRS or the LAEA file exists and is valid
         '''
         try:
-            test_gpd = gpd.read_file(mgrs_file)
+            test_gpd = gpd.read_file(gpkg_file)
         except DataSourceError as err:
-            logging.error(f"mgrs file : {err}")
+            logging.error(f"gpkg file : {err}")
             sys.exit("-2")
         except ValueError as err:
-            logging.error(f"mgrs file : {err}")
+            logging.error(f"gpkg file : {err}")
             sys.exit("-2")
         except GEOSException as err:
-            logging.error(f"mgrs file : {err}")
+            logging.error(f"gpkg file : {err}")
             sys.exit("-2")
 
-        return mgrs_file
-
+        return gpkg_file
 
     def validate_layer(self,layer_file):
         '''
@@ -245,6 +281,16 @@ class HRWSIRequest(object):
         else:
             return dt.year - 1
 
+    def get_hrwl_start_year(self, dt):
+        """Returns the HRWL reference period start date for a given datetime object."""
+        # The 3 available HRWL products are for the reference years 2021, 2024, 2027.
+        # Their location in the bucket is in YEAR where YEAR is the start year, respectively, 2016, 2021, and 2024.        
+        if dt.year <= 2021:
+            return 2016
+        elif (dt.year > 2021) and (dt.year <= 2024):
+            return 2021
+        elif dt.year > 2024:
+            return 2024
 
     def set_query_file(self, query_file):
         self.query_file = query_file
@@ -262,8 +308,8 @@ class HRWSIRequest(object):
                                  aws_secret_access_key=HRWSIRequest.SECRET_KEY,
                                  endpoint_url=HRWSIRequest.ENDPOINT_URL)
 
-    def find_MGRS_tiles(self,epsg_text,wkt_text):
-        tile_gpd = gpd.read_file(HRWSIRequest.MGRS_FILE)
+    def find_tiles(self,epsg_text,wkt_text,gpkg_file):
+        tile_gpd = gpd.read_file(gpkg_file)
 
         poly_gpd = gpd.GeoDataFrame(
             geometry=gpd.GeoSeries.from_wkt(
@@ -303,33 +349,40 @@ class HRWSIRequest(object):
             HRWSIRequest.END_DATE:None,
             }
 
-        if wkt:
-            self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
-            self.request_params[HRWSIRequest.TILES] = \
-                self.find_MGRS_tiles(*self.validate_wkt_epsg(epsg,wkt))
-
-        if vector:
-            self.validate_MGRS_file(HRWSIRequest.MGRS_FILE)
-            self.request_params[HRWSIRequest.TILES] = \
-                self.find_MGRS_tiles(*self.validate_layer(vector))
-
-        if tiles:
-            self.request_params[HRWSIRequest.TILES] = \
-                [self.validate_tile_format(tile).upper() for tile in tiles ]
-
-        if len(self.request_params[HRWSIRequest.TILES]) == 0:
-            logging.error("No tiles were identified")
-            sys.exit(-2)
-        else:
-            self.request_params[HRWSIRequest.TILES] = \
-            list(set(self.request_params[HRWSIRequest.TILES]))
-
         #search parameters
         self.request_params[HRWSIRequest.PRODUCT_TYPE] = \
         [self.validate_product_type(pT) for pT in productType]
 
         self.request_params[HRWSIRequest.START_DATE], self.request_params[HRWSIRequest.END_DATE] = \
         self.validate_dates(dateStart,dateEnd)
+
+        mgrs_tiling = True
+        if self.check_tiling_type_consistency(productType):
+            tiling_gpkg = HRWSIRequest.MGRS_FILE   
+        else: 
+            tiling_gpkg = HRWSIRequest.LAEA_FILE
+            mgrs_tiling = False
+
+        if wkt:
+            self.validate_gpkg_file(tiling_gpkg)
+            self.request_params[HRWSIRequest.TILES] = \
+                self.find_tiles(*self.validate_wkt_epsg(epsg,wkt), tiling_gpkg)
+
+        if vector:
+            self.validate_gpkg_file(tiling_gpkg)
+            self.request_params[HRWSIRequest.TILES] = \
+                self.find_tiles(*self.validate_layer(vector), tiling_gpkg)
+
+        if tiles:
+            self.request_params[HRWSIRequest.TILES] = \
+                [self.validate_tile_format(tile, mgrs_tiling).upper() for tile in tiles ]
+            
+        if len(self.request_params[HRWSIRequest.TILES]) == 0:
+            logging.error("No tiles were identified")
+            sys.exit(-2)
+        else:
+            self.request_params[HRWSIRequest.TILES] = \
+            list(set(self.request_params[HRWSIRequest.TILES]))
 
         logging.info("Query parameters: ")
         logging.info(self.request_params)
@@ -357,7 +410,13 @@ class HRWSIRequest(object):
             for tile in tqdm(self.request_params[HRWSIRequest.TILES]):
                 #logging.info("        Looking for tile : " + tile)
                 prefix = f"{pT}/{tile}"
-                if pT in self.LIST_YEARLY:
+                if pT in self.LIST_MULTIYEARLY:
+                    #we calculate the starting and ending adapted to HRWL multi-yearly products
+                    start_marker_HRWL = self.get_hrwl_start_year(start_date)
+                    end_marker_HRWL = self.get_hrwl_start_year(end_date) + 1
+                    marker_start = f"{prefix}/{start_marker_HRWL}"
+                    marker_end = f"{prefix}/{end_marker_HRWL}"  
+                elif pT in self.LIST_YEARLY:
 				    #we calculate the starting and ending Hydrological Years
                     start_marker_HY = self.get_hydro_year(start_date)
                     end_marker_HY = self.get_hydro_year(end_date) + 1
@@ -484,21 +543,21 @@ def main():
     #exclusive spatial parameters input
     group_mode_s = parser.add_argument_group("selection mode")
     group_mode_sel = group_mode_s.add_mutually_exclusive_group()
-    group_mode_sel.add_argument("-tiles", type=str, nargs='+', help="one or more tile identifier defining the products locations on the Military Grid Reference System (MGRS) grid used for Sentinel-2 products. Format T##XXX or ##XXX. Example: T31TCH 28WET")
+    group_mode_sel.add_argument("-tiles", type=str, nargs='+', help="One or more tile identifier defining the products locations, either on the Military Grid Reference System (MGRS) grid used for Sentinel-2 products (format T##XXX or ##XXX. Example: T31TCH 28WET) or on the Lambert Azimuthal Equal-Area (LAEA) projection grid (format E##N##. Example: E34N22)")
     group_mode_sel.add_argument("-vector", type=str, help="Vector file containing 2D vector layers (polygon or multipolygon). can be .shp, .geojson, .gpkg, .kml. Must include a projection system.")
     group_mode_sel.add_argument("-wkt",type=str,help="Well Known Text (between \"\") describing either a polygon ( ex: \"POLYGON ((1 1,5 1,5 5,1 5,1 1))\" ) or a multi polygon (ex: \"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\" )")
 
     # Parameters used to define a query, to use a query generated through the HR-WSI finder or to build a new one
     group_query = parser.add_argument_group("query_params", "mandatory parameters for query and query_and_download modes")
     group_query.add_argument("-epsg", type=str, help="Projection system ID. Mandatory if -wkt given. ex: 4326 or 32631")
-    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD")
+    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL or among SP_S2_LAEA_020|SP_S2_LAEA_100|SP_S1S2_LAEA_060|SP_S1S2_LAEA_100|ICD_LAEA_020|ICD_LAEA_100|WCD_LAEA_010|WCD_LAEA_100|HRWL_LAEA_010|HRWL_LAEA_100")
     group_query.add_argument("-dateStart", type=str, help="start date of the search window. Observation date. Format YYYY-MM-DD.")
     group_query.add_argument("-dateEnd", type=str, help="end date of the search window. Observation date. Format YYYY-MM-DD.")
 
     # Parameter to download products found with last query
     group_download = parser.add_argument_group("download_params", "mandatory parameters for query_and_download or download modes")
     group_download.add_argument("-query_file", type=str, \
-        help="takes a .txt file containing a list of HR-WSI products to download. Path in the format productType/tile(minus the 'T')/year/month/day/product_name")
+        help="takes a .txt file containing a list of HR-WSI products to download (paths in the format productType/tile(minus the 'T')/year/month/day/product_name or productType/LAEA_tile/year/product_name for instance)")
 
     args = parser.parse_args()
 
