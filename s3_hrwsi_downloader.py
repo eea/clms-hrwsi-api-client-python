@@ -15,9 +15,8 @@
 #
 # This Python script allows you to do S3 queries to the Copernicus Land
 # Monitoring Service (CLMS) High Resolution-Water, Snow & Ice (HR-WSI) portfolio.
-# It foresees capabilities for search and download CLMS products
-# (currently only the Near Real Time products of HR-WSI). Users are recommended
-# to rely on this Python script, to perform custom and automatic queries.
+# It foresees capabilities for search and download CLMS products. Users 
+# are recommended to rely on this Python script, to perform custom and automatic queries.
 #
 ################################################################################
 # Legal notice about Copernicus data:
@@ -92,7 +91,10 @@ class HRWSIRequest(object):
     TILE_FORMAT = 'T##XXX or ##XXX for MGRS tiles / E##N## for LAEA tiles'
 
     #LIST OF YEARLY PRODUCT TYPES
-    LIST_YEARLY = ["SP_S2","SP_S1S2","WCD","WCD_LAEA_010", "WCD_LAEA_100", "ICD"]
+    LIST_YEARLY = ["SP_S2", "SP_S2_LAEA_020", "SP_S2_LAEA_100",
+                   "SP_S1S2","SP_S1S2_LAEA_060", "SP_S1S2_LAEA_100",
+                   "WCD","WCD_LAEA_010", "WCD_LAEA_100",
+                   "ICD", "ICD_LAEA_020", "ICD_LAEA_100"]
 
     #LIST OF MULTIYEARLY PRODUCT TYPES
     LIST_MULTIYEARLY = ["HRWL","HRWL_LAEA_010", "HRWL_LAEA_100"]
@@ -129,7 +131,7 @@ class HRWSIRequest(object):
                 os.path.dirname(__file__))),
         'LAEA_tiles.gpkg')
 
-    # parameter : HRWSI product type (FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL_LAEA_010|WCD_LAEA_010|WCD_LAEA_100|HRWL|HRWL_LAEA_100).
+    # parameter : HRWSI product type FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL or SP_S2_LAEA_020|SP_S2_LAEA_100|SP_S1S2_LAEA_060|SP_S1S2_LAEA_100|ICD_LAEA_020|ICD_LAEA_100|WCD_LAEA_010|WCD_LAEA_100|HRWL_LAEA_010|HRWL_LAEA_100.
     PRODUCT_TYPE = 'productType'
 
     def __init__(self, outputPath):
@@ -540,14 +542,14 @@ def main():
     #exclusive spatial parameters input
     group_mode_s = parser.add_argument_group("selection mode")
     group_mode_sel = group_mode_s.add_mutually_exclusive_group()
-    group_mode_sel.add_argument("-tiles", type=str, nargs='+', help="one or more tile identifier defining the products locations on the Military Grid Reference System (MGRS) grid used for Sentinel-2 products. Format T##XXX or ##XXX. Example: T31TCH 28WET")
+    group_mode_sel.add_argument("-tiles", type=str, nargs='+', help="One or more tile identifier defining the products locations, either on the Military Grid Reference System (MGRS) grid used for Sentinel-2 products (format T##XXX or ##XXX. Example: T31TCH 28WET) or on the Lambert Azimuthal Equal-Area (LAEA) projection grid (format E##N##. Example: E34N22)")
     group_mode_sel.add_argument("-vector", type=str, help="Vector file containing 2D vector layers (polygon or multipolygon). can be .shp, .geojson, .gpkg, .kml. Must include a projection system.")
     group_mode_sel.add_argument("-wkt",type=str,help="Well Known Text (between \"\") describing either a polygon ( ex: \"POLYGON ((1 1,5 1,5 5,1 5,1 1))\" ) or a multi polygon (ex: \"MULTIPOLYGON (((1 1,5 1,5 5,1 5,1 1),(2 2,2 3,3 3,3 2,2 2)),((6 3,9 2,9 4,6 3)))\" )")
 
     # Parameters used to define a query, to use a query generated through the HR-WSI finder or to build a new one
     group_query = parser.add_argument_group("query_params", "mandatory parameters for query and query_and_download modes")
     group_query.add_argument("-epsg", type=str, help="Projection system ID. Mandatory if -wkt given. ex: 4326 or 32631")
-    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD")
+    group_query.add_argument("-productType", type=str, nargs='+', help="One or more product type (separated by spaces) among FSC|SWS|GFSC|WDS|WIC_S1|WIC_S2|WIC_S1S2|CC|SP_S2|SP_S1S2|ICD|WCD|HRWL or SP_S2_LAEA_020|SP_S2_LAEA_100|SP_S1S2_LAEA_060|SP_S1S2_LAEA_100|ICD_LAEA_020|ICD_LAEA_100|WCD_LAEA_010|WCD_LAEA_100|HRWL_LAEA_010|HRWL_LAEA_100")
     group_query.add_argument("-dateStart", type=str, help="start date of the search window. Observation date. Format YYYY-MM-DD.")
     group_query.add_argument("-dateEnd", type=str, help="end date of the search window. Observation date. Format YYYY-MM-DD.")
 
